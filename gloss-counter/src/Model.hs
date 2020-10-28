@@ -9,13 +9,15 @@ data InfoToShow = ShowNothing
 nO_SECS_BETWEEN_CYCLES :: Float
 nO_SECS_BETWEEN_CYCLES = 5
 
-data GameState = GameState {
-                   infoToShow  :: InfoToShow
-                 , elapsedTime :: Float
-                 }
+data GameState = Play [Rock] Ship UFO [Bullet] | GameOver
+                 
 
 initialState :: GameState
-initialState = GameState ShowNothing 0
+initialState = Play 
+                [Rock (150,150) 20 (2,6)]
+                (Ship (0,0)(0,0)) 
+                (UFO (75,75) (2,5)) 
+                []
 
 data Ship      = Ship Coordinates Speed
 data World     = Play [Asteroid] Ship UFO [Bullet] | GameOver
