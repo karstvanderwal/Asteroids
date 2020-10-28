@@ -29,12 +29,12 @@ version :: Version
 version = Version [0,1,0,0] []
 bindir, libdir, dynlibdir, datadir, libexecdir, sysconfdir :: FilePath
 
-bindir     = "C:\\Users\\karst\\OneDrive - Universiteit Utrecht\\Jaar 2\\Functioneel programmeren\\gloss-counter\\.stack-work\\install\\fc671baf\\bin"
-libdir     = "C:\\Users\\karst\\OneDrive - Universiteit Utrecht\\Jaar 2\\Functioneel programmeren\\gloss-counter\\.stack-work\\install\\fc671baf\\lib\\x86_64-windows-ghc-8.6.5\\gloss-counter-0.1.0.0-AZJn2Fw613G5GpcUNu5vY2-gloss-counter"
-dynlibdir  = "C:\\Users\\karst\\OneDrive - Universiteit Utrecht\\Jaar 2\\Functioneel programmeren\\gloss-counter\\.stack-work\\install\\fc671baf\\lib\\x86_64-windows-ghc-8.6.5"
-datadir    = "C:\\Users\\karst\\OneDrive - Universiteit Utrecht\\Jaar 2\\Functioneel programmeren\\gloss-counter\\.stack-work\\install\\fc671baf\\share\\x86_64-windows-ghc-8.6.5\\gloss-counter-0.1.0.0"
-libexecdir = "C:\\Users\\karst\\OneDrive - Universiteit Utrecht\\Jaar 2\\Functioneel programmeren\\gloss-counter\\.stack-work\\install\\fc671baf\\libexec\\x86_64-windows-ghc-8.6.5\\gloss-counter-0.1.0.0"
-sysconfdir = "C:\\Users\\karst\\OneDrive - Universiteit Utrecht\\Jaar 2\\Functioneel programmeren\\gloss-counter\\.stack-work\\install\\fc671baf\\etc"
+bindir     = "C:\\Users\\karst\\source\\repos\\Asteroids\\gloss-counter\\.stack-work\\install\\fc671baf\\bin"
+libdir     = "C:\\Users\\karst\\source\\repos\\Asteroids\\gloss-counter\\.stack-work\\install\\fc671baf\\lib\\x86_64-windows-ghc-8.6.5\\gloss-counter-0.1.0.0-AZJn2Fw613G5GpcUNu5vY2-gloss-counter"
+dynlibdir  = "C:\\Users\\karst\\source\\repos\\Asteroids\\gloss-counter\\.stack-work\\install\\fc671baf\\lib\\x86_64-windows-ghc-8.6.5"
+datadir    = "C:\\Users\\karst\\source\\repos\\Asteroids\\gloss-counter\\.stack-work\\install\\fc671baf\\share\\x86_64-windows-ghc-8.6.5\\gloss-counter-0.1.0.0"
+libexecdir = "C:\\Users\\karst\\source\\repos\\Asteroids\\gloss-counter\\.stack-work\\install\\fc671baf\\libexec\\x86_64-windows-ghc-8.6.5\\gloss-counter-0.1.0.0"
+sysconfdir = "C:\\Users\\karst\\source\\repos\\Asteroids\\gloss-counter\\.stack-work\\install\\fc671baf\\etc"
 
 getBinDir, getLibDir, getDynLibDir, getDataDir, getLibexecDir, getSysconfDir :: IO FilePath
 getBinDir = catchIO (getEnv "gloss_counter_bindir") (\_ -> return bindir)

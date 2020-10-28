@@ -16,3 +16,14 @@ data GameState = GameState {
 
 initialState :: GameState
 initialState = GameState ShowNothing 0
+
+data Ship      = Ship Coordinates Speed
+data World     = Play [Asteroid] Ship UFO [Bullet] | GameOver
+data Bullet    = Bullet Coordinates Speed Age
+data Asteroid    = Asteroid Coordinates Size Speed
+data UFO         = UFO Coordinates Speed
+
+type Coordinates = (Float, Float)
+type Speed       = (Float, Float)
+type Age         = Float
+type Size        = Float
