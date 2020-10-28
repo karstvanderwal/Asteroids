@@ -17,7 +17,7 @@ viewPure GameOver = pictures [scale 0.3 0.3 . translate (-400) 0
 viewPure (Play rocks (Ship (x,y) (vx,vy)) (UFO (ux,uy) (uvx, uvy)) bullets)
     = pictures [ship, asteroids, ufo, shots]
     where 
-        ship        = color red     (pictures [translate x y (circle 10)])
+        ship        = color white   (pictures [translate x y (polygon[(-20,0),(20,0),(0,30),(-20,0)])])
         asteroids   = pictures      [color orange (polygon (asteroidShape x y s))
                                     | Asteroid   (x,y) s _ <- rocks]
         ufo         = color green   (pictures [translate ux uy (circle 10)])
