@@ -11,12 +11,12 @@ view = return . viewPure
 viewPure :: World -> Picture
 viewPure GameOver = pictures [scale 0.3 0.3 . translate (-400) 0 
                         . color red . text $ "Game Over!",
-                        scale 0.1 0.1 . translate (-1150) (-550)
+                        scale 0.2 0.2 . translate (-625) (-550)
                         . color white . text $ "Press r to restart"]
 viewPure (Play rocks (Ship (x,y) (vx,vy) rot) (UFO (ux,uy) (uvx, uvy)) bullets)
     = pictures [ship, asteroids, ufo, shots]
     where 
-        ship        = color white   (pictures [translate x y (Rotate rot (polygon[(-20,0),(20,0),(0,30),(-20,0)]))])
+        ship        = color white   (pictures [translate x y (Rotate rot (polygon[(-15,-15),(15,-15),(0,15),(-15,-15)]))])
         asteroids   = pictures      [color orange (polygon (asteroidShape x y s))
                                     | Asteroid   (x,y) s _ <- rocks]
         ufo         = color green   (pictures [translate ux uy (circle 10)])

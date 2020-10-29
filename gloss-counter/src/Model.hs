@@ -4,7 +4,7 @@ module Model where
 
 initialState :: World
 initialState = Play 
-                [Asteroid (150,150) 20 (2,6)]
+                [Asteroid (150,150) 39 (2,6)]
                 (Ship (0,-300)(0,0) 0) 
                 (UFO (0,200) (2,5)) 
                 []

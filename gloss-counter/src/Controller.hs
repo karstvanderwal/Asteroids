@@ -12,58 +12,69 @@ import System.Random
 step :: Float -> World -> IO World
 step _ GameOver = return GameOver
 step secs (Play as (Ship shipCs shipSpeed@(shipSpeedX, shipSpeedY) rot) ufo bs)
-    | any (collidesWithAsteroid shipCs) as = return GameOver
-    | collidesWithUFO shipCs ufo           = return GameOver
-    | otherwise                            = return (Play (concatMap updateAsteroid as) 
-                                                    (Ship updateShipCs updateShipSpeed rot) 
-                                                    ufo 
-                                                    (concatMap updateBullet bs))
-      where updateShipCs :: Coordinates
-            updateShipCs = shipCs .+ (secs .* shipSpeed)
+  | any (collidesWithAsteroid shipCs) as = return GameOver
+  | collidesWithUFO shipCs ufo           = return GameOver
+  | otherwise                            = return (Play (concatMap updateAsteroid as) 
+                                                  (Ship updateShipCs updateShipSpeed rot) 
+                                                  ufo 
+                                                  (concatMap updateBullet bs))
+    where updateShipCs :: Coordinates
+          updateShipCs = cycleWorld (shipCs .+ (secs .* shipSpeed))
 
-            updateShipSpeed :: Speed
-            updateShipSpeed
-                | shipSpeedX < minimalSpeed && shipSpeedY < minimalSpeed = shipSpeed .- (secs .* (shipSpeedX,shipSpeedY))
-                | otherwise                                              = shipSpeed .- (secs .* (shipSpeedX / speedRed, shipSpeedY / speedRed))
-                  where minimalSpeed   = 8 --to make ship stand still eventually
-                        speedRed = 3 --speed/this number is the amount it's lowered every second
+          updateShipSpeed :: Speed
+          updateShipSpeed
+            | magnetude shipSpeed < minimalSpeed = (0,0)
+            | otherwise                          = shipSpeed .- (secs .* (shipSpeedX / speedRed, shipSpeedY / speedRed))
+              where minimalSpeed = 6 --to make ship stand still eventually
+                    speedRed     = 3 --speed/this number is the amount it's lowered every second
 
-            updateBullet :: Bullet -> [Bullet]
-            updateBullet (Bullet bCs speed age)
-                | age > 3                           = [] --seconds the bullet lives
-                | any (collidesWithAsteroid bCs) as = []
-                | otherwise                         = [Bullet (bCs .+ (secs .* speed)) speed (age + (secs * 1))]
+          updateBullet :: Bullet -> [Bullet]
+          updateBullet (Bullet bCs speed age)
+            | age > 2                           = [] --seconds the bullet lives
+            | any (collidesWithAsteroid bCs) as = []
+            | otherwise                         = [Bullet (cycleWorld (bCs .+ (secs .* speed))) speed (age + (secs * 1))]
 
-            updateAsteroid :: Asteroid -> [Asteroid]
-            updateAsteroid a@(Asteroid aCs size speed)
-                | collidesWithBullet a && size < 7 = []
-                | collidesWithBullet a && size > 7 = split a
-                | otherwise                        = [Asteroid (aCs .+ (secs .* speed)) size speed]
+          updateAsteroid :: Asteroid -> [Asteroid]
+          updateAsteroid a@(Asteroid aCs size speed)
+            | collidesWithBullet a && size < 10 = []
+            | collidesWithBullet a && size > 10 = split a
+            | otherwise                        = [Asteroid (cycleWorld (aCs .+ (secs .* speed))) size speed]
 
-            collidesWithAsteroid :: Coordinates -> Asteroid -> Bool
-            collidesWithAsteroid cs (Asteroid aCs size speed) = magnetude (aCs .- cs) < size
+          collidesWithAsteroid :: Coordinates -> Asteroid -> Bool
+          collidesWithAsteroid cs (Asteroid aCs size speed) = magnetude (aCs .- cs) < size
 
-            collidesWithUFO :: Coordinates -> UFO -> Bool
-            collidesWithUFO cs (UFO uCs _) = magnetude (uCs .- cs) < 10 --UFO size
+          collidesWithUFO :: Coordinates -> UFO -> Bool
+          collidesWithUFO cs (UFO uCs _) = magnetude (uCs .- cs) < 10 --UFO size
 
-            collidesWithBullet :: Asteroid -> Bool
-            collidesWithBullet a = any (\(Bullet cs _ _) -> collidesWithAsteroid cs a) bs
+          collidesWithBullet :: Asteroid -> Bool
+          collidesWithBullet a = any (\(Bullet cs _ _) -> collidesWithAsteroid cs a) bs
 
-            split :: Asteroid -> [Asteroid]
-            split (Asteroid aCs size speed) = [Asteroid aCs (size/2) (2 .* (applyRotation (pi/3) speed)),
-                                               Asteroid aCs (size/2) (2 .* (applyRotation (-pi/3) speed))]
+          split :: Asteroid -> [Asteroid]
+          split (Asteroid aCs size speed) = [Asteroid aCs (size/2) (2 .* (applyRotation (pi/3) speed)),
+                                             Asteroid aCs (size/2) (2 .* (applyRotation (-pi/3) speed))]
+
+          cycleWorld :: Coordinates -> Coordinates
+          cycleWorld (x, y)
+            | x < -screenX = (screenX, y)
+            | y < -screenY = (x, screenY)
+            | x > screenX  = (-screenX, y)
+            | y > screenY  = (x, -screenY)
+            | otherwise    = (x, y)
+              where screenX :: Float
+                    screenX = fromIntegral (fst screenRes `div` 2) :: Float
+                    screenY = fromIntegral (snd screenRes `div` 2) :: Float
 
 -- | Handle user input
 input :: Event -> World -> IO World
-input (EventKey (Char char) Down _ _) GameOver
-    | char == 'r' = return initialState
-    | otherwise   = return GameOver
-input (EventKey (Char char) Down _ _) world
-    | char == 'w' = return (thrustForward world)
-    | char == 'a' = return (turnLeft world)
-    | char == 'd' = return (turnRight world)
-    | char == ' ' = return (shoot world)
-    | otherwise = return world
+input (EventKey key Down _ _) GameOver
+  | key == Char 'r' = return initialState
+  | otherwise       = return GameOver
+input (EventKey key Down _ _) world
+  | key == Char 'w'            = return (thrustForward world)
+  | key == Char 'a'            = return (turnLeft world)
+  | key == Char 'd'            = return (turnRight world)
+  | key == SpecialKey KeySpace = return (shoot world)
+  | otherwise                  = return world
 input _ world = return world
 
 thrustForward :: World -> World
@@ -78,7 +89,7 @@ turnLeft (Play as (Ship cs (x,y) rot) ufo bs) = Play as (Ship cs (x,y) (rot - 30
 
 shoot :: World -> World
 shoot (Play as ship@(Ship shipCs _ rot) ufo bs) = Play as ship ufo (newBullet:bs)
-    where newBullet = Bullet shipCs (applyRotation rot (50,50)) 0
+    where newBullet = Bullet shipCs (applyRotation rot (300,300)) 0
 
 applyRotation :: Float -> (Float, Float) -> (Float, Float)
 applyRotation rot (x, y) = (sin degrInRad * x, cos degrInRad * y)
