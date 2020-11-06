@@ -2,20 +2,25 @@
 --   which represent the state of the game
 module Model where
 
+import Graphics.Gloss.Interface.IO.Game
+
 initialState :: World
 initialState = Play 
-                [Asteroid (150,150) 39 (2,6)]
+                [Asteroid (150,150) 40 (-30,22)]
                 (Ship (0,-300)(0,0) 0) 
-                (UFO (0,200) (2,5)) 
+                (UFO (0,200) (-200,-2) True 15) 
                 []
+                []
+                (0,6,15)
 
-data Ship      = Ship Coordinates Speed Rotation
-data World     = Play [Asteroid] Ship UFO [Bullet] | GameOver
-data Bullet    = Bullet Coordinates Speed Age
-data Asteroid    = Asteroid Coordinates Size Speed
-data UFO         = UFO Coordinates Speed
+data World    = Play [Asteroid] Ship UFO [Bullet] [Key] Level | GameOver
+data Ship     = Ship Coordinates Speed Rotation
+data UFO      = UFO Coordinates Speed Bool Time
+data Asteroid = Asteroid Coordinates Size Speed
+data Bullet   = Bullet Coordinates Speed Age
 
 type Coordinates = (Float, Float)
+type Speed    = (Float, Float)
 
 (.-) , (.+) :: (Float,Float) -> (Float,Float) -> (Float,Float)
 (x,y) .- (u,v) = (x-u,y-v)
@@ -24,14 +29,37 @@ type Coordinates = (Float, Float)
 (.*) :: Float -> (Float,Float) -> (Float,Float)
 s .* (u,v) = (s*u,s*v)
 
-type Rotation    = Float            -- Rotation in degrees
-type Speed       = (Float, Float)
-
 magnetude :: (Float,Float) -> Float
 magnetude (x, y) = sqrt (x**2 + y**2)
 
-type Age         = Float
-type Size        = Float
+type Rotation = Float            -- Rotation in degrees
 
-screenRes :: (Int, Int)
+applyRotation :: Float -> (Float, Float) -> (Float, Float)          -- First float is in degrees
+applyRotation rot (x, y) = (sin degrInRad * x, cos degrInRad * y)
+    where degrInRad = rot * 2 * pi / 360
+
+type Age  = Float
+type Size = Float
+
+type Time = Float
+
+compose :: [a -> a] -> a -> a
+compose fs v = foldl (flip (.)) id fs $ v
+
+type Level = (Int, Int, Float)
+
+-- Some variables for easy access
+screenRes :: (Int, Int) --screenRes is the size of the window
 screenRes = (700, 700)
+
+screenResF :: (Float, Float)
+screenResF = (fromIntegral $ fst screenRes, fromIntegral $ snd screenRes)
+
+thrustPower :: Speed -- thrustPower is the amount the speed is increased
+thrustPower = (10, 10)
+
+turnSpeed :: Float -- turnSpeed is the speed at which the ship rotates
+turnSpeed = 9
+
+bulletSpeed :: Speed -- bulletSpeed is the speed that the bullet gets when shot
+bulletSpeed = (450, 450)
