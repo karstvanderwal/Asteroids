@@ -22,6 +22,17 @@
   (major1) == 4 && (major2) == 12 && (minor) <= 0)
 #endif /* MIN_VERSION_base */
 
+/* package deepseq-1.4.4.0 */
+#ifndef VERSION_deepseq
+#define VERSION_deepseq "1.4.4.0"
+#endif /* VERSION_deepseq */
+#ifndef MIN_VERSION_deepseq
+#define MIN_VERSION_deepseq(major1,major2,minor) (\
+  (major1) <  1 || \
+  (major1) == 1 && (major2) <  4 || \
+  (major1) == 1 && (major2) == 4 && (minor) <= 4)
+#endif /* MIN_VERSION_deepseq */
+
 /* package gloss-1.13.0.1 */
 #ifndef VERSION_gloss
 #define VERSION_gloss "1.13.0.1"
@@ -133,7 +144,7 @@
 #endif /* MIN_TOOL_VERSION_strip */
 
 #ifndef CURRENT_COMPONENT_ID
-#define CURRENT_COMPONENT_ID "gloss-counter-0.1.0.0-AZJn2Fw613G5GpcUNu5vY2-gloss-counter"
+#define CURRENT_COMPONENT_ID "gloss-counter-0.1.0.0-EZKTzaLoqHf7R1JjH2IUss-gloss-counter"
 #endif /* CURRENT_COMPONENT_ID */
 #ifndef CURRENT_PACKAGE_VERSION
 #define CURRENT_PACKAGE_VERSION "0.1.0.0"
