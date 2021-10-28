@@ -9,21 +9,24 @@ import Graphics.Gloss.Interface.IO.Game
 import System.Random
 import Data.List
 import System.IO.Unsafe (unsafePerformIO)
+import System.IO
 import Data.Fixed
+import Control.DeepSeq
 
 -- | Handle one iteration of the game
 step :: Float -> World -> IO World
-step _ GameOver = return GameOver
-step secs (Play as (Ship shipCs shipSpeed@(shipSpeedX, shipSpeedY) rot) ufo bs keys l@(currLevel, asCount, uCountDown))
-  | any (collidesWithAsteroid shipCs) as = return GameOver
-  | collidesWithUFO shipCs ufo           = return GameOver
+step _ (GameOver s) = return $ GameOver s
+step secs w@(Play as (Ship shipCs shipSpeed@(shipSpeedX, shipSpeedY) shipRot) ufo bs keys l@(currLevel, asCount, uCountDown) s)
+  | any (collidesWithAsteroid shipCs) as = return $ loseLife w
+  | collidesWithUFO shipCs ufo           = return $ loseLife w
   | otherwise                            = updateLevel secs (inputKeys 
-                                                  (Play (concatMap updateAsteroid as) 
-                                                  (Ship updateShipCs updateShipSpeed rot) 
+                                                  (Play (concatMap updateAsteroid as)
+                                                  (Ship updateShipCs updateShipSpeed shipRot)
                                                   (updateUFO ufo)
                                                   (concatMap updateBullet bs)
                                                   keys
-                                                  l))
+                                                  l
+                                                  (updateScore s)))
     where updateShipCs :: Coordinates
           updateShipCs = cycleWorld (shipCs .+ (secs .* shipSpeed))
 
@@ -36,15 +39,15 @@ step secs (Play as (Ship shipCs shipSpeed@(shipSpeedX, shipSpeedY) rot) ufo bs k
 
           updateBullet :: Bullet -> [Bullet]
           updateBullet (Bullet bCs speed age)
-            | age > 1.2                         = [] -- seconds the bullet lives
+            | age > bulletLifeTime              = [] -- seconds the bullet lives
             | any (collidesWithAsteroid bCs) as = []
             | collidesWithUFO bCs ufo           = []
             | otherwise                         = [Bullet (cycleWorld (bCs .+ (secs .* speed))) speed (age + (secs * 1))]
 
           updateAsteroid :: Asteroid -> [Asteroid]
           updateAsteroid a@(Asteroid aCs size speed)
-            | collidesWithBulletA a && size <= 17 = []
-            | collidesWithBulletA a && size > 17 = split a
+            | collidesWithBulletA a && size <= 19 = []
+            | collidesWithBulletA a && size > 19 = split a
             | otherwise                        = [Asteroid (cycleWorld (aCs .+ (secs .* speed))) size speed]
 
           updateUFO :: UFO -> UFO
@@ -54,10 +57,10 @@ step secs (Play as (Ship shipCs shipSpeed@(shipSpeedX, shipSpeedY) rot) ufo bs k
           updateUFO u@(UFO uCs uSpeed False t) = (UFO uCs uSpeed False (t - secs))
 
           collidesWithAsteroid :: Coordinates -> Asteroid -> Bool
-          collidesWithAsteroid cs (Asteroid aCs size speed) = magnetude (aCs .- cs) < size
+          collidesWithAsteroid cs (Asteroid aCs size speed) = magnetude (aCs .- cs) < (size / 2)
 
           collidesWithUFO :: Coordinates -> UFO -> Bool
-          collidesWithUFO cs (UFO uCs _ _ _) = magnetude (uCs .- cs) < 10 --UFO size
+          collidesWithUFO cs (UFO uCs _ _ _) = magnetude (uCs .- cs) < 20 --UFO size
 
           collidesWithBulletA :: Asteroid -> Bool
           collidesWithBulletA a = any (\(Bullet cs _ _) -> collidesWithAsteroid cs a) bs
@@ -81,62 +84,99 @@ step secs (Play as (Ship shipCs shipSpeed@(shipSpeedX, shipSpeedY) rot) ufo bs k
                     screenY = fromIntegral (snd screenRes `div` 2) :: Float
           
           inputKeys :: World -> World
-          inputKeys w@(Play _ _ _ _ ks _) = compose (map keyFunc ks) w
+          inputKeys w@(Play _ _ _ _ ks _ _) = compose (map keyFunc ks) w
               where keyFunc k = case k of
                                   Char 'w'            -> thrustForward
                                   Char 'a'            -> turnLeft
                                   Char 'd'            -> turnRight
-          inputKeys GameOver = GameOver
+                                  SpecialKey KeySpace -> shoot
+          inputKeys (GameOver s) = GameOver s
+
+          loseLife :: World -> World
+          loseLife (Play as ship ufo bs ks l (lives, score)) 
+            | lives == 1 = GameOver (lives, score)
+            | otherwise  = Play as (Ship (0,0)(0,0) 0) ufo bs ks l (lives - 1, score)
+
+          updateScore :: Score -> Score
+          updateScore (x, y) = (x, y) -- not implemented
+
+
 
 -- | Handle user input
 input :: Event -> World -> IO World
-input (EventKey key Down _ _) GameOver
+input (EventKey key Down _ _) (GameOver s)
   | key == Char 'r' = return initialState
-  | otherwise       = return GameOver
-input (EventKey key Down _ _) world@(Play as ship ufo bs ks l)
-  | key == Char 'w'            = return (Play as ship ufo bs (key:ks) l)
-  | key == Char 'a'            = return (Play as ship ufo bs (key:ks) l)
-  | key == Char 'd'            = return (Play as ship ufo bs (key:ks) l)
-  | key == SpecialKey KeySpace = return $ shoot world
+  | key == Char 's' = saveScore $ GameOver s
+  | otherwise       = return $ GameOver s
+input (EventKey key Down _ _) world@(Play as ship ufo bs ks l s)
+  | key == Char 'w'            = return (Play as ship ufo bs (key:ks) l s)
+  | key == Char 'a'            = return (Play as ship ufo bs (key:ks) l s)
+  | key == Char 'd'            = return (Play as ship ufo bs (key:ks) l s)
+  | key == SpecialKey KeySpace = return (Play as ship ufo bs (key:ks) l s)
+  | key == Char 'q'            = return (GameOver (s))
   | otherwise                  = return world
-input (EventKey key Up _ _) world@(Play as ship ufo bs ks l)
-  | key == Char 'w'            = return (Play as ship ufo bs (delete key ks) l)
-  | key == Char 'a'            = return (Play as ship ufo bs (delete key ks) l)
-  | key == Char 'd'            = return (Play as ship ufo bs (delete key ks) l)
+input (EventKey key Up _ _) world@(Play as ship ufo bs ks l s)
+  | key == Char 'w'            = return (Play as ship ufo bs (delete key ks) l s)
+  | key == Char 'a'            = return (Play as ship ufo bs (delete key ks) l s)
+  | key == Char 'd'            = return (Play as ship ufo bs (delete key ks) l s)
+  | key == SpecialKey KeySpace = return (Play as ship ufo bs (delete key ks) l s)
   | otherwise                  = return world
 input _ world = return world
 
 thrustForward :: World -> World
-thrustForward (Play as (Ship shipCs shipSpeed rot) ufo bs keys l) = Play as (Ship shipCs updateShipSpeed rot) ufo bs keys l
-    where updateShipSpeed = shipSpeed .+ (applyRotation rot thrustPower)
+thrustForward (Play as (Ship shipCs shipSpeed shipRot) ufo bs keys l s) = Play as (Ship shipCs updateShipSpeed shipRot) ufo bs keys l s
+    where updateShipSpeed = shipSpeed .+ (applyRotation shipRot thrustPower)
 
 turnRight :: World -> World
-turnRight (Play as (Ship cs (x,y) rot) ufo bs keys l) = Play as (Ship cs (x,y) (rot + turnSpeed)) ufo bs keys l
+turnRight (Play as (Ship cs (x,y) shipRot) ufo bs keys l s) = Play as (Ship cs (x,y) (shipRot + turnSpeed)) ufo bs keys l s
 
 turnLeft :: World -> World
-turnLeft (Play as (Ship cs (x,y) rot) ufo bs keys l) = Play as (Ship cs (x,y) (rot - turnSpeed)) ufo bs keys l
+turnLeft (Play as (Ship cs (x,y) shipRot) ufo bs keys l s) = Play as (Ship cs (x,y) (shipRot - turnSpeed)) ufo bs keys l s
 
 shoot :: World -> World
-shoot (Play as ship@(Ship shipCs shipSpeed rot) ufo bs keys l) = Play as ship ufo (newBullet:bs) keys l
-    where newBullet = Bullet shipCs (applyRotation rot (bulletSpeed .+ shipSpeed)) 0
+shoot (Play as ship@(Ship shipCs shipSpeed shipRot) ufo bs keys l s) = 
+  Play  as ship ufo
+        ((newBullet $ head' bs) ++ bs)
+        keys l s
+    where head' :: [Bullet] -> [Bullet]
+          head' [] = []
+          head' (x:xs) = [x]
+
+          newBullet :: [Bullet] -> [Bullet]
+          newBullet [] = [Bullet shipCs (applyRotation shipRot (bulletSpeed .+ shipSpeed)) 0]
+          newBullet [(Bullet _ _ age)]
+            | age < shootSpeed = []            
+            | otherwise        = [Bullet shipCs (applyRotation shipRot (bulletSpeed .+ shipSpeed)) 0]
 
 getRandom :: IO Float 
 getRandom = do  randomNumber <- randomIO
-                print randomNumber
                 return randomNumber
+
+saveScore :: World -> IO World
+saveScore w@(GameOver (l, score))
+  | l == -1   = return w
+  | otherwise = do
+      handle <- openFile "highScores.txt" ReadWriteMode
+      contents <- hGetContents handle
+      let newScore = putScore $! contents
+      rnf contents `seq` writeFile "highScores.txt" (unlines newScore)
+      hClose handle
+      return $ GameOver (-1, score)
+        where putScore s = reverse $ map show (sort $ (map (\x -> read x :: Int) ((show score):(words s))))
 
 
 
 -- Game logic, levels, spawning asteroids, all that good stuff
 updateLevel :: Float -> World -> IO World
-updateLevel secs (Play as ship ufo bs keys l@(currLevel, asCount, uCountDown))
-  | null as   = return $ Play (newAsteroids asCount) ship ufo bs keys (currLevel + 1, min 20 (asCount + 1), max (uCountDown - 1) 5)
+updateLevel secs (Play as ship ufo bs keys l@(currLevel, asCount, uCountDown) s)
+  | null as   = return $ Play (newAsteroids asCount) ship ufo bs keys (currLevel + 1, min 20 (asCount + 1), max (uCountDown - 1) 5) s
   | otherwise = return $ Play as
                         ship
                         (levelUpdateUFO ufo)
                         bs
                         keys
                         l
+                        s
     where levelUpdateUFO :: UFO -> UFO
           levelUpdateUFO u@(UFO uCs uSpeed active t)
             | active == False && t <= 0 = UFO ((unsafePerformIO getRandom) * (fromIntegral $ snd screenRes), 
