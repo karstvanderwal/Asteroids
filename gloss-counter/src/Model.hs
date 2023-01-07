@@ -3,35 +3,46 @@
 module Model where
 
 import Graphics.Gloss.Interface.IO.Game
+import Prelude
+import System.Random
 
 initialState :: World
 initialState = Play 
-                [Asteroid (150,150) 60 (-30,22)]
+                []
                 (Ship (0,0)(0,0) 0)
-                (UFO (0,200) (-200,-2) True 15)
+                (UFO (0,400) (-200,-2) False 10)  -- Spawn UFO after 10 seconds
                 []
                 []
                 (0,6,15)
                 (3,0)
 
-data World    = Play [Asteroid] Ship UFO [Bullet] [Key] Level Score | GameOver Score
+data World    = Play [Asteroid] Ship UFO [Bullet] [Key] Level Score 
+              | GameOver Score 
+              | Pause [Asteroid] Ship UFO [Bullet] [Key] Level Score
+data Asteroid = Asteroid Coordinates Size Speed
 data Ship     = Ship Coordinates Speed Rotation
 data UFO      = UFO Coordinates Speed Bool Time
-data Asteroid = Asteroid Coordinates Size Speed
 data Bullet   = Bullet Coordinates Speed Age
+
+type Level = (Int, Int, Float)  -- (level, asteroidCount, respawnTimeUFO)
+type Score = (Float, Int)       -- (lives, score), lives must be a whole number
 
 type Coordinates = (Float, Float)
 type Speed    = (Float, Float)
 
-(.-) , (.+) :: (Float,Float) -> (Float,Float) -> (Float,Float)
+(.-) , (.+) :: (Float, Float) -> (Float, Float) -> (Float, Float)
 (x,y) .- (u,v) = (x-u,y-v)
 (x,y) .+ (u,v) = (x+u,y+v)
 
-(.*) :: Float -> (Float,Float) -> (Float,Float)
+(.*) :: Float -> (Float, Float) -> (Float, Float)
 s .* (u,v) = (s*u,s*v)
 
-magnetude :: (Float,Float) -> Float
+magnetude :: (Float, Float) -> Float
 magnetude (x, y) = sqrt (x**2 + y**2)
+
+unitVector :: (Float, Float) -> (Float, Float)
+unitVector (x, y) = (x / mag, y / mag)
+  where mag = magnetude (x, y)
 
 type Rotation = Float            -- Rotation in degrees
 
@@ -46,9 +57,6 @@ type Time = Float
 
 compose :: [a -> a] -> a -> a
 compose fs v = foldl (flip (.)) id fs $ v
-
-type Level = (Int, Int, Float)  -- (level, asteroidCount, respawnTimeUFO)
-type Score = (Float, Int)       -- (lives, score), lives must be a whole number
 
 -- Some variables for easy access
 screenRes :: (Int, Int) --screenRes is the size of the window
@@ -71,3 +79,15 @@ bulletLifeTime = 1
 
 shootSpeed :: Float -- Shoot a bullet every shootSpeed seconds
 shootSpeed = 0.2
+
+ufoSize :: Float -- size of the ufo, hitbox and draw
+ufoSize = 20
+
+ufoSpeed :: Float -- speed of the ufo
+ufoSpeed = 80
+
+minAsteroidSize :: Float -- asteroid disappears when it's very small
+minAsteroidSize = 19
+
+safeDistance :: Float -- asteroids won't spawn in this radius
+safeDistance = 80

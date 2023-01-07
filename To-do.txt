@@ -1,0 +1,12 @@
+Player - done
+Enemies - done
+Randomness - done
+Animation - alles nog
+Pause - done
+Interaction with the file system - insert name
+
+scores
+
+Nice to haves:
+Asteroid-shapes
+UFO shooting
